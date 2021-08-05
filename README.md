@@ -15,3 +15,15 @@ docker build . --build-arg VERSION=4.4 --tag mongors
 ```
 
 Run the image as normal, add the `?replicaSet=rs0` param to the connection url and pray 🙏! 🤣
+
+If you are working with docker-compose, set the `PRIMARY_HOST` environment variable to match your service name as follow
+
+```yaml
+# ...
+services:
+  db:
+    image: mongors
+    env:
+      PRIMARY_HOST: db
+# ...
+```
