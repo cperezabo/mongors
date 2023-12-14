@@ -16,5 +16,5 @@ docker buildx build --platform linux/amd64,linux/arm64 --build-arg VERSION="$VER
 # In my case I just created one using the following command:
 # `docker buildx create --name apple-silicon-intel --platform linux/amd64,linux/arm64``
 # And made Docker use it by running:
-# `docker builx use apple-silicon-intel`
+# `docker buildx use apple-silicon-intel`
 # Then re-run this script.
