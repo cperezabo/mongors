@@ -1,29 +1,39 @@
 # MongoDB with replica set
 
-Docker image based on official MongoDB image with a ready replica set for testing purposes.
-
-Many, I mean, MANY improvements can be done to this, but at the moment it covers my needs
-
-Any idea is welcome
+Docker image based on the official MongoDB image, running a single-node replica set (`rs0`) for development and
+testing, so transactions and change streams work.
 
 ## Usage
 
-Build the image with the MongoDB version you need
+Build the image with the MongoDB version you need (6.0 or later; the image relies on `mongosh`):
 
 ```shell
-docker build . --build-arg VERSION=4.4 --tag mongors
+./build.sh 9.0.8
 ```
 
-Run the image as normal, add the `?replicaSet=rs0` param to the connection url and pray 🙏! 🤣
+The container's health check initiates the replica set and reports healthy once the node can take writes, so wait for
+it before connecting. On a restart it finds the set already initiated; if the container comes back with a different
+host name over the same data, it repoints the member to the new one.
 
-If you are working with docker-compose, set the `PRIMARY_HOST` environment variable to match your service name as follow
+The member is announced as `<host>:27017`, where `<host>` is the container's host name. Clients that discover the
+replica set connect to that name. On a user-defined Docker network, such as the ones Docker Compose and GitHub Actions
+service containers use, Docker resolves the default host name (the container's short ID), so there is nothing to
+configure. Set `PRIMARY_HOST` only to announce a different name.
 
 ```yaml
-# ...
 services:
   db:
-    image: mongors
-    env:
-      PRIMARY_HOST: db
-# ...
+    image: cperezabo/mongors:9.0.8
+  app:
+    environment:
+      MONGODB_URL: mongodb://db/test
+    depends_on:
+      db:
+        condition: service_healthy
 ```
+
+Clients outside that network, such as tools on the host connecting through a published port, cannot resolve the member
+name: add `directConnection=true` to their connection string.
+
+Scripts in `/docker-entrypoint-initdb.d` are not supported: the official entrypoint runs them before the replica set
+exists, and their writes fail with `not primary`.
