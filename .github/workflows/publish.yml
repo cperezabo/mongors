@@ -1,0 +1,48 @@
+name: Publish
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Tag of the official mongo image to build on, such as 8.3.17. Empty publishes the latest stable.
+        required: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: docker/setup-qemu-action@v4
+
+      - uses: docker/setup-buildx-action@v4
+
+      # mongo:latest only names the newest stable release; the exact version comes from the image's MONGO_VERSION.
+      - name: Resolve version
+        id: version
+        env:
+          REQUESTED: ${{ inputs.version }}
+        run: |
+          version="$REQUESTED"
+          if [ -z "$version" ]; then
+            version="$(
+              docker buildx imagetools inspect mongo:latest --format '{{json .Image}}' |
+                jq -r '.["linux/amd64"].config.Env[] | select(startswith("MONGO_VERSION=")) | ltrimstr("MONGO_VERSION=")'
+            )"
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          build-args: VERSION=${{ steps.version.outputs.version }}
+          tags: cperezabo/mongors:${{ steps.version.outputs.version }}
+          push: true

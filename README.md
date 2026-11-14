@@ -5,7 +5,12 @@ testing, so transactions and change streams work.
 
 ## Usage
 
-Build the image with the MongoDB version you need (6.0 or later; the image relies on `mongosh`):
+Images are published to Docker Hub as `cperezabo/mongors:<version>`, matching the official `mongo` tags from 6.0 on
+(the image relies on `mongosh`). The Publish workflow builds them for amd64 and arm64: every push to `master` publishes
+the latest stable MongoDB, and running it manually publishes the version you pass. It needs the `DOCKERHUB_USERNAME` and
+`DOCKERHUB_TOKEN` repository secrets.
+
+To publish from your machine instead:
 
 ```shell
 ./build.sh 9.0.8
