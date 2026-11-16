@@ -2,7 +2,8 @@
 
 # Docker runs this check from the moment the container starts, so it doubles as the replica set initializer: it
 # initiates the set the first time, repoints the only member when the container comes back with another host name
-# over the same data, and reports healthy only once this node can take writes.
+# over the same data, sets w: 1 as the default write concern unless one was already set, and reports healthy only once
+# this node can take writes.
 
 member="${PRIMARY_HOST:-$(hostname)}:27017"
 
@@ -19,5 +20,9 @@ exec mongosh --quiet --norc --eval "
       throw error;
     }
   }
-  quit(db.hello().isWritablePrimary ? 0 : 1);
+  const primary = db.hello().isWritablePrimary;
+  if (primary && db.adminCommand({ getDefaultRWConcern: 1 }).defaultWriteConcernSource === 'implicit') {
+    db.adminCommand({ setDefaultRWConcern: 1, defaultWriteConcern: { w: 1 } });
+  }
+  quit(primary ? 0 : 1);
 "

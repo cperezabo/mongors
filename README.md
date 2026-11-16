@@ -20,6 +20,15 @@ The container's health check initiates the replica set and reports healthy once 
 it before connecting. On a restart it finds the set already initiated; if the container comes back with a different
 host name over the same data, it repoints the member to the new one.
 
+The health check also sets `w: 1` as the default write concern before reporting healthy. MongoDB's own default,
+`majority`, makes every write and every transaction commit wait for the journal to reach the disk; with `w: 1` the node
+acknowledges them once applied, so a crash can lose the last acknowledged writes. Transactions work the same. A default
+set by hand is kept, and a client can still ask for another write concern in its connection string (`w=majority`):
+
+```js
+db.adminCommand({ setDefaultRWConcern: 1, defaultWriteConcern: { w: 'majority' } })
+```
+
 The member is announced as `<host>:27017`, where `<host>` is the container's host name. Clients that discover the
 replica set connect to that name. On a user-defined Docker network, such as the ones Docker Compose and GitHub Actions
 service containers use, Docker resolves the default host name (the container's short ID), so there is nothing to
